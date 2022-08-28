@@ -1,15 +1,14 @@
 # Databricks notebook source
 
-# %%
-import sqlite3
+# Databricks notebook source
+# MAGIC %pip install faker
 
+# COMMAND ----------
 
-%pip install faker
+# MAGIC %pip install https://github.com/databrickslabs/dbldatagen/releases/download/v.0.2.0-rc1-master/dbldatagen-0.2.0rc1-py3-none-any.whl
 
-# %%
-%pip install https://github.com/databrickslabs/dbldatagen/releases/download/v.0.2.0-rc1-master/dbldatagen-0.2.0rc1-py3-none-any.whl
+# COMMAND ----------
 
-# %%
 import dbldatagen as dg
 import pyspark.sql.functions as F
 from faker.providers import geo, internet, address
@@ -26,7 +25,7 @@ cdc_inc_data_df = cdc_inc_data_spec.build()
 
 display(cdc_inc_data_df)
 
-# %%
+# COMMAND ----------
 cdc_data_df = spark.table("erictome_cdf_delta_sharing.share_data") 
 
 (cdc_data_df.alias('existing') 
