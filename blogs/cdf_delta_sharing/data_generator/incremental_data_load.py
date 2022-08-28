@@ -15,14 +15,18 @@ from delta.tables import *
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC use catalog erictome;
+
+# COMMAND ----------
+
 # DBTITLE 1,Generate Update Data
 cdc_inc_data_spec = (dg.DataGenerator(spark, rows=100000, partitions = 1)
     .withColumn('RECID', 'int' , uniqueValues=1000000)
 	.withColumn('COMPANYNAME', 'string' , values=['Company1','Company2','Company3'])
-    .withColumn('QUANTITY', 'long' , minValue=1, maxValue=5, random=True)
-    .withColumn("UPDATE_TIME", "timestamp", expr="current_timestamp()")
- 	
-           )
+    .withColumn('QUANTITY', 'int' , minValue=5, maxValue=10, random=True)
+    .withColumn("UPDATE_TIME", "timestamp", expr="current_timestamp()"))
+
 cdc_inc_data_df = cdc_inc_data_spec.build()
 
 display(cdc_inc_data_df)
@@ -39,7 +43,6 @@ deltaTable = DeltaTable.forName(spark, 'erictome_cdf_delta_sharing.share_data')
   ) 
   .whenMatchedUpdate(set =
     {
-      "RECID": "updates.RECID",
       "COMPANYNAME": "updates.COMPANYNAME",
       "QUANTITY": "updates.QUANTITY",
       "UPDATE_TIME": "updates.UPDATE_TIME"
@@ -47,7 +50,6 @@ deltaTable = DeltaTable.forName(spark, 'erictome_cdf_delta_sharing.share_data')
   ) 
   .whenNotMatchedInsert(values =
     {
-      "RECID": "updates.RECID",
       "COMPANYNAME": "updates.COMPANYNAME",
       "QUANTITY": "updates.QUANTITY",
       "UPDATE_TIME": "updates.UPDATE_TIME"
@@ -64,3 +66,26 @@ deltaTable.delete("RECID BETWEEN 200000 AND 299999 ")
 
 # DBTITLE 1,Checking Delete Worked
 spark.table("erictome_cdf_delta_sharing.share_data").count()
+
+# COMMAND ----------
+
+# DBTITLE 1,Insert Updated Records to Share Table
+# MAGIC %sql
+# MAGIC insert into erictome_cdf_delta_sharing.cdf_ds_external
+# MAGIC  select RECID,
+# MAGIC     COMPANYNAME,
+# MAGIC     QUANTITY,
+# MAGIC     UPDATE_TIME,
+# MAGIC     _change_type change_type,
+# MAGIC     _commit_version commit_version,
+# MAGIC     _commit_timestamp commit_timestamp
+# MAGIC    from table_changes('erictome_cdf_delta_sharing.share_data',0) 
+# MAGIC    where _change_type <> 'update_preimage' 
+# MAGIC    and _commit_version > (select max(commit_version) max_commit from erictome_cdf_delta_sharing.cdf_ds_external limit 1)
+# MAGIC    order by RECID
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC 
+# MAGIC select * from erictome_cdf_delta_sharing.cdf_ds_external order by RECID, commit_version
