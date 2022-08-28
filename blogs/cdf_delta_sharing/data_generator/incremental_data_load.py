@@ -1,3 +1,5 @@
+# Databricks notebook source
+
 # %%
 import sqlite3
 
