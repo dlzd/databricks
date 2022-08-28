@@ -1,6 +1,4 @@
 # Databricks notebook source
-
-# Databricks notebook source
 # MAGIC %pip install faker
 
 # COMMAND ----------
@@ -13,8 +11,13 @@ import dbldatagen as dg
 import pyspark.sql.functions as F
 from faker.providers import geo, internet, address
 from dbldatagen import fakerText
-cdc_inc_data_spec = (dg.DataGenerator(spark, rows=100000, partitions = 10)
-    .withColumn('ID', 'int' , minValue=1, maxValue=1000000, random=True)
+from delta.tables import *
+
+# COMMAND ----------
+
+# DBTITLE 1,Generate Update Data
+cdc_inc_data_spec = (dg.DataGenerator(spark, rows=100000, partitions = 1)
+    .withColumn('RECID', 'int' , uniqueValues=1000000)
 	.withColumn('COMPANYNAME', 'string' , values=['Company1','Company2','Company3'])
     .withColumn('QUANTITY', 'long' , minValue=1, maxValue=5, random=True)
     .withColumn("UPDATE_TIME", "timestamp", expr="current_timestamp()")
@@ -22,20 +25,21 @@ cdc_inc_data_spec = (dg.DataGenerator(spark, rows=100000, partitions = 10)
            )
 cdc_inc_data_df = cdc_inc_data_spec.build()
 
-
 display(cdc_inc_data_df)
 
 # COMMAND ----------
-cdc_data_df = spark.table("erictome_cdf_delta_sharing.share_data") 
 
-(cdc_data_df.alias('existing') 
+# DBTITLE 1,CDC Merge
+deltaTable = DeltaTable.forName(spark, 'erictome_cdf_delta_sharing.share_data')
+
+(deltaTable.alias('existing') 
   .merge(
     cdc_inc_data_df.alias('updates'),
-    'existing.ID = updates.ID'
+    'existing.RECID = updates.RECID'
   ) 
   .whenMatchedUpdate(set =
     {
-      "ID": "updates.ID",
+      "RECID": "updates.RECID",
       "COMPANYNAME": "updates.COMPANYNAME",
       "QUANTITY": "updates.QUANTITY",
       "UPDATE_TIME": "updates.UPDATE_TIME"
@@ -43,7 +47,7 @@ cdc_data_df = spark.table("erictome_cdf_delta_sharing.share_data")
   ) 
   .whenNotMatchedInsert(values =
     {
-      "ID": "updates.ID",
+      "RECID": "updates.RECID",
       "COMPANYNAME": "updates.COMPANYNAME",
       "QUANTITY": "updates.QUANTITY",
       "UPDATE_TIME": "updates.UPDATE_TIME"
@@ -51,3 +55,12 @@ cdc_data_df = spark.table("erictome_cdf_delta_sharing.share_data")
   ) 
   .execute())
 
+# COMMAND ----------
+
+# DBTITLE 1,Delete Records
+deltaTable.delete("RECID BETWEEN 200000 AND 299999 ")
+
+# COMMAND ----------
+
+# DBTITLE 1,Checking Delete Worked
+spark.table("erictome_cdf_delta_sharing.share_data").count()
