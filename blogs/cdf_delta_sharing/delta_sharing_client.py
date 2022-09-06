@@ -15,3 +15,9 @@ table_url = f"{profile}#ds_cdf_table_share.cdf_ds_external.Company2"
 df = ds.load_as_pandas(table_url)
 
 print(df.loc[(df['RECID'] <= 200100)].sort_values(by=['RECID']))
+
+# Use delta sharing client to load data from full table
+table_url_full_share = f"{profile}#ds_cdf_table_share.share_data.Company2"
+
+df_full = ds.load_table_changes_as_pandas(table_url_full_share, 2)
+print(df_full.head(10))
