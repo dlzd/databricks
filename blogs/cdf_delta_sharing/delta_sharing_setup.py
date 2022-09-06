@@ -25,12 +25,26 @@
 
 # COMMAND ----------
 
-# DBTITLE 1,Add Table to Share
+# DBTITLE 1,Add Table to Share (CDF Share Only)
 # MAGIC %sql
 # MAGIC ALTER SHARE ds_cdf_table_share 
 # MAGIC ADD TABLE erictome_cdf_delta_sharing.cdf_ds_external
 # MAGIC PARTITION (`COMPANYNAME` = "Company2") as cdf_ds_external.Company2;
+
+# COMMAND ----------
+
+# DBTITLE 1,Add Table to Share (Data + CDF Share)
+# MAGIC %sql
 # MAGIC 
+# MAGIC ALTER SHARE ds_cdf_table_share
+# MAGIC ADD TABLE erictome_cdf_delta_sharing.share_data
+# MAGIC -- PARTITION (`COMPANYNAME` = "Company2")  -- CURRENTLY UNSUPPORTED WITH CDF ENABLED
+# MAGIC AS share_data.Company2
+# MAGIC WITH CHANGE DATA FEED;
+
+# COMMAND ----------
+
+# MAGIC %sql
 # MAGIC SHOW ALL IN SHARE ds_cdf_table_share;
 
 # COMMAND ----------
@@ -71,5 +85,9 @@
 
 # MAGIC %sql
 # MAGIC 
-# MAGIC -- DROP RECIPIENT IF EXISTS erictome; 
-# MAGIC -- DROP SHARE IF EXISTS ds_cdf_table_share;
+# MAGIC DROP RECIPIENT IF EXISTS erictome; 
+# MAGIC DROP SHARE IF EXISTS ds_cdf_table_share;
+
+# COMMAND ----------
+
+

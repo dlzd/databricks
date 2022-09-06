@@ -29,7 +29,7 @@ cdc_data_spec = (dg.DataGenerator(spark, rows=1000000, partitions = 10)
 
 cdc_data_df = cdc_data_spec.build()
 
-cdc_data_df.write.mode("overwrite").saveAsTable("erictome_cdf_delta_sharing.share_data")
+cdc_data_df.write.mode("overwrite").partitionBy("COMPANYNAME").saveAsTable("erictome_cdf_delta_sharing.share_data")
 
 # COMMAND ----------
 
